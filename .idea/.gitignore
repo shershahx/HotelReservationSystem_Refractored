@@ -1,0 +1,33 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+build/
+*.log
+*.class
+*.jar
+*.war
+*.rar
+*.zip
+*.tar.gz
+*.exe
+.DS_Store
+.gradle/
+*.iml
+out/
+.idea/
+target/
+node_modules/
+dist/
+.env
+.vscode/
+*.swp
+*.swo
+*~
+.settings/
+.classpath
+.project
