@@ -154,24 +154,9 @@ scanner.nextLine();
 
 ---
 
-#### Code Smell #4: Feature Envy
-**Location:** `makeReservation()` accessing Room internals
-
-**Legacy Code:**
-```java
-double totalCost = roomService.getRoomById(roomId).getPrice() * numberOfNights;
-```
-
-**Problems:**
-- Method envies Room's data (price)
-- Calculation logic should belong to Room or Reservation
-- Poor encapsulation
-
----
-
 ### 3.2 Room.java
 
-#### Code Smell #5: Data Class
+#### Code Smell #4: Data Class
 **Location:** Entire Room class
 
 **Legacy Code:**
@@ -205,20 +190,9 @@ public class Room {
 
 ---
 
-#### Code Smell #6: Lack of Encapsulation
-**Location:** All setters in Room class
-
-**Problems:**
-- All fields have public setters
-- No validation in setters
-- IDs can be changed after creation (should be immutable)
-- Price can be set to negative values
-
----
-
 ### 3.3 User.java
 
-#### Code Smell #7: Replace Type Code with Enum
+#### Code Smell #5: Replace Type Code with Enum
 **Location:** Role field
 
 **Legacy Code:**
@@ -234,97 +208,33 @@ private String role; // "Customer", "Admin", "Staff"
 
 ---
 
-#### Code Smell #8: Unused Class
-**Location:** Entire User class
-
-**Problems:**
-- User class is defined but never used in the system
-- Dead code cluttering the codebase
-- Indicates incomplete design
-
----
-
-#### Code Smell #9: Security Issue
-**Location:** Password handling
-
-**Legacy Code:**
-```java
-public String getPassword() {
-    return password;
-}
-
-public void setPassword(String password) {
-    this.password = password;
-}
-```
-
-**Problems:**
-- Password exposed via getter
-- Stored as plain text
-- No password verification method
-- Security vulnerability
-
----
-
 ### 3.4 RoomService.java & ReservationService.java
 
-#### Code Smell #10: Primitive Obsession
-**Location:** Exception handling
+#### Code Smell #6: Lack of Validation
+**Location:** Reservation constructor
 
 **Legacy Code:**
 ```java
-public Room getRoomById(int roomId) throws Exception {
-    for (Room room : rooms) {
-        if (room.getRoomId() == roomId) {
-            return room;
-        }
-    }
-    throw new Exception("Room not found");
+public Reservation(int reservationId, int userId, int roomId, 
+                   Date checkInDate, Date checkOutDate, double totalCost) {
+    this.reservationId = reservationId;
+    this.userId = userId;
+    this.roomId = roomId;
+    this.checkInDate = checkInDate;
+    this.checkOutDate = checkOutDate;
+    this.totalCost = totalCost;
 }
 ```
 
 **Problems:**
-- Generic Exception type
-- No specific exception types
-- Hard to handle different error scenarios
-- Poor error context
+- No validation of IDs (can be negative)
+- No date range validation
+- No null checks
+- No cost validation (can be negative)
 
 ---
 
-#### Code Smell #11: Duplicate Code Pattern
-**Location:** CRUD operations in both services
-
-**Legacy Code:**
-```java
-// In RoomService
-public Room getRoomById(int roomId) throws Exception {
-    for (Room room : rooms) {
-        if (room.getRoomId() == roomId) {
-            return room;
-        }
-    }
-    throw new Exception("Room not found");
-}
-
-// Similar pattern in ReservationService
-public Reservation getReservationById(int reservationId) throws Exception {
-    for (Reservation reservation : reservations) {
-        if (reservation.getReservationId() == reservationId) {
-            return reservation;
-        }
-    }
-    throw new Exception("Reservation not found");
-}
-```
-
-**Problems:**
-- Same search pattern in both services
-- Could be abstracted to generic repository
-- Duplicate error handling
-
----
-
-#### Code Smell #12: Missing Encapsulation of Collections
+#### Code Smell #7: Poor Encapsulation of Collections
 **Location:** `getAllRooms()` and `getAllReservations()`
 
 **Legacy Code:**
@@ -389,19 +299,31 @@ public Date getCheckInDate() {
 ### Summary of Code Smells
 | Category | Count | Severity |
 |----------|-------|----------|
-| Long Methods | 3 | High |
-| Magic Numbers/Strings | 5 | Medium |
-| Data Classes | 3 | High |
-| Lack of Validation | 8 | High |
-| Poor Encapsulation | 6 | High |
-| Primitive Obsession | 3 | Medium |
-| Duplicate Code | 4 | Medium |
-| Dead Code | 1 | Low |
-| **TOTAL** | **33** | - |
+| Long Methods | 1 | High |
+| Magic Numbers | 1 | High |
+| Data Classes | 1 | High |
+| Lack of Validation | 1 | High |
+| Poor Encapsulation | 1 | High |
+| Primitive Obsession (Generic Exceptions) | 1 | High |
+| Replace Type Code with Enum | 1 | Medium |
+| **TOTAL** | **7** | - |
 
 ---
 
 ## 4. Refactoring Techniques Applied
+
+### Summary of Refactoring Techniques
+| # | Technique | Code Smell Fixed | Impact |
+|---|-----------|-------------------|--------|
+| 1 | Extract Method | Long Methods | High |
+| 2 | Replace Magic Number with Constant | Magic Numbers | High |
+| 3 | Replace Data Value with Object | Data Classes | High |
+| 4 | Introduce Assertion | Lack of Validation | High |
+| 5 | Encapsulate Collection | Poor Encapsulation | High |
+| 6 | Replace Error Code with Exception | Primitive Obsession | High |
+| 7 | Replace Type Code with Enum | Type Code as String | Medium |
+
+---
 
 ### 4.1 Extract Method
 **Purpose:** Break down long methods into smaller, focused methods
@@ -528,523 +450,7 @@ roomService.addRoom(new Room(
 
 ---
 
-### 4.3 Extract Class
-**Purpose:** Create utility classes for reusable functionality
-
-**Example - DateUtils class:**
-
-**Before:**
-```java
-// Calculation scattered in main class
-double totalCost = roomService.getRoomById(roomId).getPrice() * 
-    (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24);
-```
-
-**After:**
-```java
-// DateUtils.java
-public final class DateUtils {
-    
-    private DateUtils() {
-        throw new AssertionError("Cannot instantiate utility class");
-    }
-    
-    public static long calculateDaysBetween(Date checkInDate, Date checkOutDate) {
-        if (checkInDate == null || checkOutDate == null) {
-            throw new IllegalArgumentException("Dates cannot be null");
-        }
-        
-        long timeDifference = checkOutDate.getTime() - checkInDate.getTime();
-        return timeDifference / AppConstants.MILLISECONDS_PER_DAY;
-    }
-    
-    public static boolean isValidDateRange(Date checkInDate, Date checkOutDate) {
-        if (checkInDate == null || checkOutDate == null) {
-            return false;
-        }
-        return checkOutDate.after(checkInDate);
-    }
-}
-
-// Usage
-long numberOfNights = DateUtils.calculateDaysBetween(checkInDate, checkOutDate);
-```
-
-**Benefits:**
-- Centralized date logic
-- Reusable across project
-- Easy to test
-- Follows Single Responsibility Principle
-
-**Created Utility Classes:**
-1. `DateUtils` - Date calculations and validation
-2. `InputValidator` - Input validation logic
-3. `AppConstants` - Application constants
-
----
-
-### 4.4 Replace Type Code with Enum
-**Purpose:** Replace string/int type codes with type-safe enums
-
-**Example - User roles:**
-
-**Before:**
-```java
-private String role; // "Customer", "Admin", "Staff"
-
-public void setRole(String role) {
-    this.role = role;
-}
-
-// Usage - prone to errors
-user.setRole("Administrat"); // Typo! No compile-time check
-```
-
-**After:**
-```java
-// UserRole.java
-public enum UserRole {
-    CUSTOMER("Customer"),
-    ADMIN("Admin"),
-    STAFF("Staff");
-    
-    private final String displayName;
-    
-    UserRole(String displayName) {
-        this.displayName = displayName;
-    }
-    
-    public String getDisplayName() {
-        return displayName;
-    }
-}
-
-// In User.java
-private UserRole role;
-
-public void setRole(UserRole role) {
-    if (role == null) {
-        throw new IllegalArgumentException("Role cannot be null");
-    }
-    this.role = role;
-}
-
-// Usage - compile-time safe
-user.setRole(UserRole.ADMIN); // Type-safe, no typos possible
-```
-
-**Benefits:**
-- Compile-time type safety
-- No invalid values possible
-- IDE auto-completion
-- Easy to add new roles
-- Self-documenting
-
----
-
-### 4.5 Replace Error Code with Exception
-**Purpose:** Create specific exception types for better error handling
-
-**Example:**
-
-**Before:**
-```java
-public Room getRoomById(int roomId) throws Exception {
-    for (Room room : rooms) {
-        if (room.getRoomId() == roomId) {
-            return room;
-        }
-    }
-    throw new Exception("Room not found");
-}
-
-// Usage - can't distinguish error types
-try {
-    Room room = roomService.getRoomById(123);
-} catch (Exception e) {
-    // What kind of error? Room not found? Invalid ID? Database error?
-}
-```
-
-**After:**
-```java
-// RoomException.java
-public class RoomException extends Exception {
-    public RoomException(String message) {
-        super(message);
-    }
-    
-    public RoomException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
-
-// In RoomService.java
-public Room getRoomById(int roomId) throws RoomException {
-    if (!InputValidator.isValidId(roomId)) {
-        throw new RoomException(AppConstants.ERROR_INVALID_ROOM_ID);
-    }
-    
-    return findRoomById(roomId)
-            .orElseThrow(() -> new RoomException(AppConstants.ERROR_ROOM_NOT_FOUND));
-}
-
-// Usage - specific error handling
-try {
-    Room room = roomService.getRoomById(123);
-} catch (RoomException e) {
-    // Specific room-related error handling
-    logger.error("Room operation failed: " + e.getMessage());
-}
-```
-
-**Benefits:**
-- Specific exception types
-- Better error context
-- Easier to handle different scenarios
-- More maintainable
-
-**Created Exceptions:**
-1. `RoomException` - Room-related errors
-2. `ReservationException` - Reservation-related errors
-
----
-
-### 4.6 Encapsulate Field
-**Purpose:** Add validation and protect fields from invalid states
-
-**Example - Room class:**
-
-**Before:**
-```java
-public class Room {
-    private int roomId;
-    private double price;
-    
-    public void setRoomId(int roomId) {
-        this.roomId = roomId; // No validation!
-    }
-    
-    public void setPrice(double price) {
-        this.price = price; // Can be negative!
-    }
-}
-
-// Usage - creates invalid state
-room.setRoomId(-5); // Negative ID!
-room.setPrice(-100.0); // Negative price!
-```
-
-**After:**
-```java
-public class Room {
-    private int roomId;
-    private double price;
-    
-    // Constructor with validation
-    public Room(int roomId, String roomType, double price, boolean isAvailable) {
-        if (!InputValidator.isValidId(roomId)) {
-            throw new IllegalArgumentException("Room ID must be positive");
-        }
-        if (!InputValidator.isValidPrice(price)) {
-            throw new IllegalArgumentException("Price must be greater than zero");
-        }
-        
-        this.roomId = roomId;
-        this.price = price;
-    }
-    
-    // No setter for roomId - immutable after creation
-    public int getRoomId() {
-        return roomId;
-    }
-    
-    public double getPrice() {
-        return price;
-    }
-    
-    // Setter with validation
-    public void setPrice(double price) {
-        if (!InputValidator.isValidPrice(price)) {
-            throw new IllegalArgumentException("Price must be greater than zero");
-        }
-        this.price = price;
-    }
-}
-```
-
-**Benefits:**
-- Prevents invalid object states
-- Immutable IDs (can't change after creation)
-- Validation enforced at all times
-- Fail-fast on invalid data
-
----
-
-### 4.7 Encapsulate Collection
-**Purpose:** Prevent external modification of internal collections
-
-**Example:**
-
-**Before:**
-```java
-public class RoomService {
-    private List<Room> rooms = new ArrayList<>();
-    
-    public List<Room> getAllRooms() {
-        return rooms; // Returns direct reference!
-    }
-}
-
-// Usage - breaks encapsulation
-List<Room> rooms = roomService.getAllRooms();
-rooms.clear(); // Oops! Cleared all rooms in service!
-```
-
-**After:**
-```java
-public class RoomService {
-    private final List<Room> rooms;
-    
-    public RoomService() {
-        this.rooms = new ArrayList<>();
-    }
-    
-    public List<Room> getAllRooms() {
-        return Collections.unmodifiableList(rooms);
-    }
-    
-    public List<Room> getAvailableRooms() {
-        return rooms.stream()
-                .filter(Room::isAvailable)
-                .collect(Collectors.collectingAndThen(
-                    Collectors.toList(),
-                    Collections::unmodifiableList
-                ));
-    }
-}
-
-// Usage - safe
-List<Room> rooms = roomService.getAllRooms();
-rooms.clear(); // Throws UnsupportedOperationException - protected!
-```
-
-**Benefits:**
-- Internal collections protected
-- Prevents accidental modification
-- Maintains service invariants
-- Thread-safety improvements
-
----
-
-### 4.8 Introduce Assertion
-**Purpose:** Add validation to enforce preconditions and invariants
-
-**Example:**
-
-**Before:**
-```java
-public Reservation(int reservationId, int userId, int roomId, 
-                   Date checkInDate, Date checkOutDate, double totalCost) {
-    this.reservationId = reservationId;
-    this.userId = userId;
-    this.roomId = roomId;
-    this.checkInDate = checkInDate;
-    this.checkOutDate = checkOutDate;
-    this.totalCost = totalCost;
-}
-```
-
-**After:**
-```java
-public Reservation(int reservationId, int userId, int roomId, 
-                   Date checkInDate, Date checkOutDate, double totalCost) {
-    // Assertions
-    if (!InputValidator.isValidId(reservationId)) {
-        throw new IllegalArgumentException(AppConstants.ERROR_INVALID_RESERVATION_ID);
-    }
-    if (!InputValidator.isValidId(userId)) {
-        throw new IllegalArgumentException("User ID must be positive");
-    }
-    if (!InputValidator.isValidId(roomId)) {
-        throw new IllegalArgumentException(AppConstants.ERROR_INVALID_ROOM_ID);
-    }
-    if (!DateUtils.isValidDateRange(checkInDate, checkOutDate)) {
-        throw new IllegalArgumentException(AppConstants.ERROR_INVALID_DATE_RANGE);
-    }
-    if (totalCost < 0) {
-        throw new IllegalArgumentException("Total cost cannot be negative");
-    }
-    
-    this.reservationId = reservationId;
-    this.userId = userId;
-    this.roomId = roomId;
-    this.checkInDate = new Date(checkInDate.getTime()); // Defensive copy
-    this.checkOutDate = new Date(checkOutDate.getTime());
-    this.totalCost = totalCost;
-}
-```
-
-**Benefits:**
-- Fail-fast on invalid data
-- Clear contract for method users
-- Prevents bugs from propagating
-- Better error messages
-
----
-
-### 4.9 Move Method
-**Purpose:** Move behavior to the class that has the most relevant data
-
-**Example - Cost calculation:**
-
-**Before:**
-```java
-// In HotelReservationSystem.java
-double totalCost = roomService.getRoomById(roomId).getPrice() * numberOfNights;
-```
-
-**After:**
-```java
-// In Room.java
-public double calculateCost(long numberOfNights) {
-    if (numberOfNights <= 0) {
-        throw new IllegalArgumentException("Number of nights must be positive");
-    }
-    return this.price * numberOfNights;
-}
-
-// In Reservation.java
-public long getNumberOfNights() {
-    return DateUtils.calculateDaysBetween(checkInDate, checkOutDate);
-}
-
-public void recalculateCost(double roomPrice) {
-    if (!InputValidator.isValidPrice(roomPrice)) {
-        throw new IllegalArgumentException(AppConstants.ERROR_INVALID_PRICE);
-    }
-    this.totalCost = roomPrice * getNumberOfNights();
-}
-
-// Usage
-Room room = roomService.getRoomById(roomId);
-double totalCost = room.calculateCost(numberOfNights);
-```
-
-**Benefits:**
-- Behavior near related data
-- Better encapsulation
-- More cohesive classes
-- Easier to maintain
-
----
-
-### 4.10 Separate Query from Modifier
-**Purpose:** Methods should either query or modify, not both
-
-**Example:**
-
-**Before:**
-```java
-// This method both queries and modifies!
-public Room getRoomAndMarkOccupied(int roomId) throws Exception {
-    Room room = getRoomById(roomId);
-    room.setAvailable(false);
-    return room;
-}
-```
-
-**After:**
-```java
-// Query method - no side effects
-public Room getRoomById(int roomId) throws RoomException {
-    return findRoomById(roomId)
-            .orElseThrow(() -> new RoomException(AppConstants.ERROR_ROOM_NOT_FOUND));
-}
-
-// Query method
-public boolean isRoomAvailable(int roomId) throws RoomException {
-    Room room = getRoomById(roomId);
-    return room.isAvailable();
-}
-
-// Modifier method
-public void markRoomAsOccupied(int roomId) throws RoomException {
-    Room room = getRoomById(roomId);
-    if (!room.isAvailable()) {
-        throw new RoomException(AppConstants.ERROR_ROOM_NOT_AVAILABLE);
-    }
-    room.markAsOccupied();
-}
-
-// Usage
-if (roomService.isRoomAvailable(roomId)) {
-    roomService.markRoomAsOccupied(roomId);
-}
-```
-
-**Benefits:**
-- Predictable method behavior
-- No hidden side effects
-- Easier to test
-- Better method naming
-
----
-
-### 4.11 Introduce Null Object (Optional)
-**Purpose:** Use Optional instead of returning null
-
-**Example:**
-
-**Before:**
-```java
-public Room getRoomById(int roomId) throws Exception {
-    for (Room room : rooms) {
-        if (room.getRoomId() == roomId) {
-            return room;
-        }
-    }
-    return null; // Requires null checks everywhere
-}
-
-// Usage
-Room room = roomService.getRoomById(123);
-if (room != null) { // Easy to forget!
-    // use room
-}
-```
-
-**After:**
-```java
-private Optional<Room> findRoomById(int roomId) {
-    return rooms.stream()
-            .filter(room -> room.getRoomId() == roomId)
-            .findFirst();
-}
-
-public Room getRoomById(int roomId) throws RoomException {
-    if (!InputValidator.isValidId(roomId)) {
-        throw new RoomException(AppConstants.ERROR_INVALID_ROOM_ID);
-    }
-    
-    return findRoomById(roomId)
-            .orElseThrow(() -> new RoomException(AppConstants.ERROR_ROOM_NOT_FOUND));
-}
-
-// Usage - no null checks needed
-Room room = roomService.getRoomById(123);
-// Either have room or exception thrown
-```
-
-**Benefits:**
-- No null pointer exceptions
-- Clear intent (value may not exist)
-- Functional programming style
-- Better API design
-
----
-
-### 4.12 Replace Data Value with Object
+### 4.3 Replace Data Value with Object
 **Purpose:** Add behavior to data classes
 
 **Example - Room class:**
@@ -1112,127 +518,308 @@ double cost = room.calculateCost(5);
 
 ---
 
-### 4.13 Decompose Conditional
-**Purpose:** Extract complex conditionals into well-named methods
+### 4.4 Introduce Assertion
+**Purpose:** Create specific exception types for better error handling
 
 **Example:**
 
 **Before:**
 ```java
-if (checkInDate != null && checkOutDate != null && checkOutDate.after(checkInDate)) {
-    // proceed
+public Room getRoomById(int roomId) throws Exception {
+    for (Room room : rooms) {
+        if (room.getRoomId() == roomId) {
+            return room;
+        }
+    }
+    throw new Exception("Room not found");
+}
+
+// Usage - can't distinguish error types
+try {
+    Room room = roomService.getRoomById(123);
+} catch (Exception e) {
+    // What kind of error? Room not found? Invalid ID? Database error?
 }
 ```
 
 **After:**
 ```java
-// In DateUtils.java
-public static boolean isValidDateRange(Date checkInDate, Date checkOutDate) {
-    if (checkInDate == null || checkOutDate == null) {
-        return false;
+// RoomException.java
+public class RoomException extends Exception {
+    public RoomException(String message) {
+        super(message);
     }
-    return checkOutDate.after(checkInDate);
+    
+    public RoomException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+// In RoomService.java
+public Room getRoomById(int roomId) throws RoomException {
+    if (!InputValidator.isValidId(roomId)) {
+        throw new RoomException(AppConstants.ERROR_INVALID_ROOM_ID);
+    }
+    
+    return findRoomById(roomId)
+            .orElseThrow(() -> new RoomException(AppConstants.ERROR_ROOM_NOT_FOUND));
+}
+
+// Usage - specific error handling
+try {
+    Room room = roomService.getRoomById(123);
+} catch (RoomException e) {
+    // Specific room-related error handling
+    logger.error("Room operation failed: " + e.getMessage());
+}
+```
+
+**Benefits:**
+- Specific exception types
+- Better error context
+- Easier to handle different scenarios
+- More maintainable
+
+**Created Exceptions:**
+1. `RoomException` - Room-related errors
+2. `ReservationException` - Reservation-related errors
+
+---
+
+### 4.5 Encapsulate Collection
+**Purpose:** Prevent external modification of internal collections
+
+**Example:**
+
+**Before:**
+```java
+public class RoomService {
+    private List<Room> rooms = new ArrayList<>();
+    
+    public List<Room> getAllRooms() {
+        return rooms; // Returns direct reference!
+    }
+}
+
+// Usage - breaks encapsulation
+List<Room> rooms = roomService.getAllRooms();
+rooms.clear(); // Oops! Cleared all rooms in service!
+```
+
+**After:**
+```java
+public class RoomService {
+    private final List<Room> rooms;
+    
+    public RoomService() {
+        this.rooms = new ArrayList<>();
+    }
+    
+    public List<Room> getAllRooms() {
+        return Collections.unmodifiableList(rooms);
+    }
+    
+    public List<Room> getAvailableRooms() {
+        return rooms.stream()
+                .filter(Room::isAvailable)
+                .collect(Collectors.collectingAndThen(
+                    Collectors.toList(),
+                    Collections::unmodifiableList
+                ));
+    }
+}
+
+// Usage - safe
+List<Room> rooms = roomService.getAllRooms();
+rooms.clear(); // Throws UnsupportedOperationException - protected!
+```
+
+**Benefits:**
+- Internal collections protected
+- Prevents accidental modification
+- Maintains service invariants
+- Thread-safety improvements
+
+---
+
+### 4.6 Replace Error Code with Exception
+**Purpose:** Create specific exception types for better error handling
+
+**Example:**
+
+**Before:**
+```java
+public Room getRoomById(int roomId) throws Exception {
+    for (Room room : rooms) {
+        if (room.getRoomId() == roomId) {
+            return room;
+        }
+    }
+    throw new Exception("Room not found");
+}
+
+// Usage - can't distinguish error types
+try {
+    Room room = roomService.getRoomById(123);
+} catch (Exception e) {
+    // What kind of error? Room not found? Invalid ID? Database error?
+}
+```
+
+**After:**
+```java
+// RoomException.java
+public class RoomException extends Exception {
+    public RoomException(String message) {
+        super(message);
+    }
+    
+    public RoomException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+// ReservationException.java
+public class ReservationException extends Exception {
+    public ReservationException(String message) {
+        super(message);
+    }
+}
+
+// In RoomService.java
+public Room getRoomById(int roomId) throws RoomException {
+    if (!InputValidator.isValidId(roomId)) {
+        throw new RoomException(AppConstants.ERROR_INVALID_ROOM_ID);
+    }
+    
+    return findRoomById(roomId)
+            .orElseThrow(() -> new RoomException(AppConstants.ERROR_ROOM_NOT_FOUND));
+}
+
+// Usage - specific error handling
+try {
+    Room room = roomService.getRoomById(123);
+} catch (RoomException e) {
+    // Specific room-related error handling
+    System.err.println("Room error: " + e.getMessage());
+}
+```
+
+**Benefits:**
+- Specific exception types
+- Better error context
+- Easier to handle different scenarios
+- More maintainable
+
+**Created Exceptions:**
+1. `RoomException` - Room-related errors
+2. `ReservationException` - Reservation-related errors
+3. `UserException` - User authentication errors
+
+---
+
+### 4.7 Replace Type Code with Enum
+**Purpose:** Move behavior to the class that has the most relevant data
+
+**Example - Cost calculation:**
+
+**Before:**
+```java
+// In HotelReservationSystem.java
+double totalCost = roomService.getRoomById(roomId).getPrice() * numberOfNights;
+```
+
+**After:**
+```java
+// In Room.java
+public double calculateCost(long numberOfNights) {
+    if (numberOfNights <= 0) {
+        throw new IllegalArgumentException("Number of nights must be positive");
+    }
+    return this.price * numberOfNights;
+}
+
+// In Reservation.java
+public long getNumberOfNights() {
+    return DateUtils.calculateDaysBetween(checkInDate, checkOutDate);
+}
+
+public void recalculateCost(double roomPrice) {
+    if (!InputValidator.isValidPrice(roomPrice)) {
+        throw new IllegalArgumentException(AppConstants.ERROR_INVALID_PRICE);
+    }
+    this.totalCost = roomPrice * getNumberOfNights();
 }
 
 // Usage
-if (DateUtils.isValidDateRange(checkInDate, checkOutDate)) {
-    // proceed
-}
+Room room = roomService.getRoomById(roomId);
+double totalCost = room.calculateCost(numberOfNights);
 ```
 
 **Benefits:**
-- Self-documenting code
-- Reusable validation
-- Easier to test
-- Cleaner conditionals
-
----
-
-### 4.14 Remove Setting Method
-**Purpose:** Remove setters for fields that shouldn't change
-
-**Example:**
-
-**Before:**
-```java
-public class Room {
-    private int roomId;
-    
-    public void setRoomId(int roomId) {
-        this.roomId = roomId; // ID should never change!
-    }
-}
-
-// Bad usage possible
-room.setRoomId(999); // Changes room identity!
-```
-
-**After:**
-```java
-public class Room {
-    private int roomId;
-    
-    public Room(int roomId, ...) {
-        // Set once in constructor
-        this.roomId = roomId;
-    }
-    
-    public int getRoomId() {
-        return roomId; // Read-only
-    }
-    
-    // No setter - roomId is immutable
-}
-```
-
-**Benefits:**
-- Immutable identifiers
-- Prevents identity confusion
-- Thread-safe
-- Clearer object lifecycle
-
----
-
-### 4.15 Hide Method
-**Purpose:** Make helper methods private
-
-**Example:**
-
-**Before:**
-```java
-public class RoomService {
-    // Exposed as public unnecessarily
-    public Optional<Room> findRoomById(int roomId) {
-        return rooms.stream()
-                .filter(room -> room.getRoomId() == roomId)
-                .findFirst();
-    }
-}
-```
-
-**After:**
-```java
-public class RoomService {
-    // Internal helper method
-    private Optional<Room> findRoomById(int roomId) {
-        return rooms.stream()
-                .filter(room -> room.getRoomId() == roomId)
-                .findFirst();
-    }
-    
-    // Public API
-    public Room getRoomById(int roomId) throws RoomException {
-        return findRoomById(roomId)
-                .orElseThrow(() -> new RoomException(ERROR_ROOM_NOT_FOUND));
-    }
-}
-```
-
-**Benefits:**
-- Smaller public API
-- More flexibility to change internals
+- Behavior near related data
 - Better encapsulation
-- Clearer interface
+- More cohesive classes
+- Easier to maintain
+
+---
+
+### 4.7 Replace Type Code with Enum
+**Purpose:** Replace string/int type codes with type-safe enums
+
+**Example - User roles:**
+
+**Before:**
+```java
+private String role; // "Customer", "Admin", "Staff"
+
+public void setRole(String role) {
+    this.role = role;
+}
+
+// Usage - prone to errors
+user.setRole("Administrat"); // Typo! No compile-time check
+```
+
+**After:**
+```java
+// UserRole.java
+public enum UserRole {
+    CUSTOMER("Customer"),
+    ADMIN("Admin"),
+    STAFF("Staff");
+    
+    private final String displayName;
+    
+    UserRole(String displayName) {
+        this.displayName = displayName;
+    }
+    
+    public String getDisplayName() {
+        return displayName;
+    }
+}
+
+// In User.java
+private UserRole role;
+
+public void setRole(UserRole role) {
+    if (role == null) {
+        throw new IllegalArgumentException("Role cannot be null");
+    }
+    this.role = role;
+}
+
+// Usage - compile-time safe
+user.setRole(UserRole.ADMIN); // Type-safe, no typos possible
+```
+
+**Benefits:**
+- Compile-time type safety
+- No invalid values possible
+- IDE auto-completion
+- Easy to add new roles
+- Self-documenting
 
 ---
 
@@ -1706,42 +1293,34 @@ private static double calculateReservationCost(int roomId, Date checkIn, Date ch
 
 ### 7.1 Summary of Improvements
 
-This refactoring project successfully transformed a legacy Hotel Reservation System into a clean, maintainable, and professional codebase.
+This refactoring project successfully transformed a legacy Hotel Reservation System into a clean, maintainable, and professional codebase with role-based authentication.
 
 **Key Achievements:**
 
-1. **Identified 33 code smells** across all major categories
-2. **Applied 15+ refactoring techniques** systematically
-3. **Created 6 new classes** for better organization
+1. **Identified 7 critical code smells** across major categories
+2. **Applied 7 targeted refactoring techniques** systematically
+3. **Created 8 new classes** for better organization (UserService, UserException, utilities)
 4. **Added comprehensive validation** throughout
-5. **Improved error handling** with custom exceptions
+5. **Improved error handling** with 3 custom exception types
 6. **Eliminated all magic numbers** using constants
-7. **Reduced code duplication** from 25% to 3%
-8. **Decreased average method complexity** by 62%
-9. **Enhanced documentation** by 400%
-10. **Improved maintainability index** from 58 to 85
+7. **Decreased average method complexity** by 62%
+8. **Improved maintainability index** from 58 to 85
+9. **Implemented authentication system** with role-based access control
+10. **Enhanced documentation** with comprehensive guides
 
 ---
 
 ### 7.2 Refactoring Techniques Summary
 
-| Technique | Count | Impact |
-|-----------|-------|---------|
-| Extract Method | 25+ | High |
-| Replace Magic Number with Constant | 15 | High |
-| Encapsulate Field | 12 | High |
-| Introduce Assertion | 20+ | High |
-| Extract Class | 3 | Medium |
-| Replace Type Code with Enum | 1 | Medium |
-| Replace Error Code with Exception | 2 | High |
-| Encapsulate Collection | 4 | High |
-| Move Method | 5 | Medium |
-| Separate Query from Modifier | 8 | Medium |
-| Introduce Null Object (Optional) | 4 | Medium |
-| Replace Data Value with Object | 3 | High |
-| Decompose Conditional | 6 | Medium |
-| Remove Setting Method | 3 | Low |
-| Hide Method | 5 | Low |
+| Technique | Code Smell Fixed | Impact |
+|-----------|-------------------|--------|
+| Extract Method | Long Methods | High |
+| Replace Magic Number with Constant | Magic Numbers | High |
+| Replace Data Value with Object | Data Classes | High |
+| Introduce Assertion | Lack of Validation | High |
+| Encapsulate Collection | Poor Encapsulation | High |
+| Replace Error Code with Exception | Primitive Obsession | High |
+| Replace Type Code with Enum | Type Code as String | Medium |
 
 ---
 
@@ -1779,16 +1358,13 @@ While this refactoring significantly improved the codebase, potential future enh
 
 **For Demo Day, highlight:**
 
-1. **Side-by-side comparison** - Show legacy vs refactored code
-2. **Code smell examples** - Point out specific issues
-3. **Refactoring techniques** - Demonstrate each technique applied
-4. **Run the application** - Show it still works (regression-free)
-5. **Quality metrics** - Show before/after numbers
-6. **Package structure** - Explain organization
-7. **Error handling** - Demonstrate improved exception handling
-8. **Validation** - Show input validation working
-9. **Documentation** - Highlight comprehensive docs
-10. **Maintainability** - Explain why code is easier to maintain
+1. **7 Critical Code Smells** - Focus on the most impactful issues identified
+2. **Side-by-side comparison** - Show legacy vs refactored code for each smell
+3. **7 Refactoring techniques** - Demonstrate each technique and its fix
+4. **Run the application** - Show it still works with authentication
+5. **Quality metrics** - Show dramatic improvements in maintainability
+6. **Package structure** - Explain clean architecture
+7. **Authentication system** - Demonstrate role-based access control
 
 ---
 
