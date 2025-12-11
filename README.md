@@ -56,8 +56,7 @@ HotelReservationSystem/
 
 ## 📚 Documentation Files
 
-### 1. **REFACTORING_DOCUMENTATION.md** (Main Document)
-**Size:** ~15,000 words  
+### 1. **REFACTORING_DOCUMENTATION.md** (Main Document)  
 **Contents:**
 - Complete project introduction
 - All 33 code smells identified with examples
