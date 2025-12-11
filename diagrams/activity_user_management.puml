@@ -1,0 +1,60 @@
+@startuml Hotel_Reservation_System_Activity_User_Management
+
+title Hotel Reservation System - User Management Activity (Admin Only)
+
+start
+
+:Admin selects "Manage Users";
+
+:Display management menu;
+
+if (Option?) then (Change User Role)
+  
+  partition "Change Role" {
+    :Prompt for User ID;
+    :Read user ID;
+    
+    :Display role options;
+    note right
+      1. Customer
+      2. Staff
+      3. Admin
+    end note
+    
+    :User selects new role;
+    
+    if (Valid role?) then (yes)
+      :Update user role;
+      :Display success message;
+    else (no)
+      :Display "Invalid role" error;
+    endif
+  }
+  
+else (Delete User)
+  
+  partition "Delete User" {
+    :Prompt for User ID;
+    :Read user ID;
+    
+    if (User ID == Admin's ID?) then (yes)
+      :Display "Cannot delete yourself" error;
+    else (no)
+      :Prompt for confirmation;
+      
+      if (Confirmed?) then (yes)
+        :Remove user from list;
+        :Display success message;
+      else (no)
+        :Display "Cancelled" message;
+      endif
+    endif
+  }
+  
+else (Back)
+  :Return to main menu;
+endif
+
+stop
+
+@enduml

@@ -1,0 +1,64 @@
+@startuml Hotel_Reservation_System_Activity_Cancel_Reservation
+
+title Hotel Reservation System - Cancel Reservation Activity
+
+start
+
+:User selects "Cancel Reservation";
+
+if (User role?) then (Admin/Staff)
+  
+  partition "Admin/Staff - Cancel Any" {
+    :Display all reservations;
+    
+    if (Reservations exist?) then (yes)
+      :Prompt for Reservation ID;
+      :Read reservation ID;
+      
+      :Find reservation;
+      
+      if (Reservation found?) then (yes)
+        :Get room ID from reservation;
+        :Remove reservation;
+        :Mark room as available;
+        :Display success message;
+      else (no)
+        :Display "Reservation not found" error;
+      endif
+      
+    else (no)
+      :Display "No reservations to cancel";
+    endif
+  }
+  
+else (Customer)
+  
+  partition "Customer - Cancel Own" {
+    :Fetch user's reservations;
+    :Display own reservations;
+    
+    if (Has reservations?) then (yes)
+      :Prompt for Reservation ID;
+      :Read reservation ID;
+      
+      :Verify reservation belongs to user;
+      
+      if (Owns reservation?) then (yes)
+        :Get room ID from reservation;
+        :Remove reservation;
+        :Mark room as available;
+        :Display success message;
+      else (no)
+        :Display "Not your reservation" error;
+      endif
+      
+    else (no)
+      :Display "No reservations to cancel";
+    endif
+  }
+  
+endif
+
+stop
+
+@enduml

@@ -1,8 +1,10 @@
 package hotelreservationsystem;
 
 import hotelreservationsystem.constants.AppConstants;
+import hotelreservationsystem.enums.UserRole;
 import hotelreservationsystem.exceptions.ReservationException;
 import hotelreservationsystem.exceptions.RoomException;
+import hotelreservationsystem.exceptions.UserException;
 import hotelreservationsystem.utils.DateUtils;
 import java.util.Date;
 import java.util.List;
@@ -18,26 +20,48 @@ import java.util.Scanner;
  * - Separate Query from Modifier
  * - Replace Conditional with Polymorphism (menu system could be improved further)
  * 
+ * ENHANCEMENT: Added User Authentication System
+ * 
  * @author Refactored by Software Re-Engineering
  */
 public class HotelReservationSystem {
     private static final RoomService roomService = new RoomService();
     private static final ReservationService reservationService = new ReservationService();
+    private static final UserService userService = new UserService();
     private static Scanner scanner;
+    private static User currentUser = null;
 
     public static void main(String[] args) {
         scanner = new Scanner(System.in);
         initializeSystem();
-        runMainLoop();
+        
+        // Main application loop with authentication
+        boolean exitProgram = false;
+        while (!exitProgram) {
+            // Authentication loop
+            while (currentUser == null) {
+                if (!showAuthMenu()) {
+                    exitProgram = true;
+                    break; // User chose to exit
+                }
+            }
+            
+            // If logged in, run main menu
+            if (currentUser != null) {
+                runMainLoop();
+            }
+        }
+        
         cleanup();
     }
 
     /**
-     * Initialize system with default rooms
+     * Initialize system with default rooms and users
      * Refactoring Technique: Extract Method
      */
     private static void initializeSystem() {
         try {
+            // Initialize default rooms
             roomService.addRoom(new Room(
                 AppConstants.DEFAULT_SINGLE_ROOM_ID, 
                 AppConstants.ROOM_TYPE_SINGLE, 
@@ -56,9 +80,96 @@ public class HotelReservationSystem {
                 AppConstants.DEFAULT_SUITE_ROOM_PRICE, 
                 true
             ));
-        } catch (RoomException e) {
+            
+            // Initialize default users
+            userService.registerUser(1, "admin", "admin123", UserRole.ADMIN);
+            userService.registerUser(2, "staff", "staff123", UserRole.STAFF);
+            userService.registerUser(3, "customer", "customer123", UserRole.CUSTOMER);
+            
+        } catch (RoomException | UserException e) {
             System.err.println("Error initializing system: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Show authentication menu
+     * @return true to continue, false to exit
+     */
+    private static boolean showAuthMenu() {
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║   Hotel Reservation System - Login    ║");
+        System.out.println("╚════════════════════════════════════════╝");
+        System.out.println("1. Login");
+        System.out.println("2. Register");
+        System.out.println("3. Exit");
+        System.out.print("Choose an option: ");
+        
+        int choice = readMenuOption();
+        
+        try {
+            switch (choice) {
+                case 1:
+                    login();
+                    break;
+                case 2:
+                    register();
+                    break;
+                case 3:
+                    System.out.println("Goodbye!");
+                    return false;
+                default:
+                    System.out.println("Invalid option!");
+            }
+        } catch (UserException e) {
+            displayErrorMessage(e);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Login functionality
+     */
+    private static void login() throws UserException {
+        System.out.println("\n--- Login ---");
+        System.out.print("Username: ");
+        String username = scanner.nextLine();
+        System.out.print("Password: ");
+        String password = scanner.nextLine();
+        
+        currentUser = userService.authenticate(username, password);
+        System.out.println("\n✓ Login successful! Welcome, " + currentUser.getUsername() + "!");
+        System.out.println("Role: " + currentUser.getRole());
+    }
+    
+    /**
+     * Registration functionality
+     */
+    private static void register() throws UserException {
+        System.out.println("\n--- Register New Account ---");
+        
+        System.out.print("Username: ");
+        String username = scanner.nextLine();
+        
+        if (userService.usernameExists(username)) {
+            throw new UserException("Username already taken!");
+        }
+        
+        System.out.print("Password: ");
+        String password = scanner.nextLine();
+        System.out.print("Confirm Password: ");
+        String confirmPassword = scanner.nextLine();
+        
+        if (!password.equals(confirmPassword)) {
+            throw new UserException("Passwords don't match!");
+        }
+        
+        int userId = userService.getNextUserId();
+        User newUser = userService.registerUser(userId, username, password, UserRole.CUSTOMER);
+        
+        System.out.println("\n✓ Registration successful!");
+        System.out.println("Your User ID: " + newUser.getUserId());
+        System.out.println("You can now login with your credentials.");
     }
 
     /**
@@ -80,17 +191,46 @@ public class HotelReservationSystem {
      * Refactoring Technique: Extract Method
      */
     private static void displayMenu() {
-        System.out.println("\n========================================");
-        System.out.println("  Hotel Reservation System");
-        System.out.println("========================================");
-        System.out.println(AppConstants.MENU_VIEW_ROOMS + ". View All Rooms");
-        System.out.println(AppConstants.MENU_ADD_ROOM + ". Add Room");
-        System.out.println(AppConstants.MENU_MAKE_RESERVATION + ". Make Reservation");
-        System.out.println(AppConstants.MENU_CANCEL_RESERVATION + ". Cancel Reservation");
-        System.out.println(AppConstants.MENU_VIEW_RESERVATIONS + ". View All Reservations");
-        System.out.println(AppConstants.MENU_EXIT + ". Exit");
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║      Hotel Reservation System          ║");
+        System.out.println("╠════════════════════════════════════════╣");
+        System.out.println("║ User: " + String.format("%-32s", currentUser.getUsername()) + "║");
+        System.out.println("║ Role: " + String.format("%-32s", currentUser.getRole()) + "║");
+        System.out.println("╚════════════════════════════════════════╝");
+        System.out.println("1. View All Rooms");
+        
+        // Admin/Staff only options - Room Management
+        if (isAdminOrStaff()) {
+            System.out.println("2. Add Room (Admin/Staff)");
+            System.out.println("3. Remove Room (Admin/Staff)");
+        }
+        
+        // Customer only option - Booking
+        if (currentUser.getRole() == UserRole.CUSTOMER) {
+            System.out.println("2. Make Reservation");
+        }
+        
+        System.out.println("4. Cancel Reservation");
+        System.out.println("5. View Reservations");
+        
+        // Admin only options - User Management
+        if (currentUser.getRole() == UserRole.ADMIN) {
+            System.out.println("6. View All Users (Admin)");
+            System.out.println("7. Manage Users (Admin)");
+        }
+        
+        System.out.println("8. My Profile");
+        System.out.println("9. Logout");
         System.out.println("========================================");
         System.out.print("Choose an option: ");
+    }
+    
+    /**
+     * Check if current user is admin or staff
+     */
+    private static boolean isAdminOrStaff() {
+        return currentUser.getRole() == UserRole.ADMIN || 
+               currentUser.getRole() == UserRole.STAFF;
     }
 
     /**
@@ -119,24 +259,50 @@ public class HotelReservationSystem {
     private static boolean processMenuOption(int option) {
         try {
             switch (option) {
-                case AppConstants.MENU_VIEW_ROOMS:
+                case 1: // View All Rooms
                     viewAllRooms();
                     break;
-                case AppConstants.MENU_ADD_ROOM:
-                    addRoom();
+                case 2: // Add Room (Admin/Staff) OR Make Reservation (Customer)
+                    if (isAdminOrStaff()) {
+                        addRoom();
+                    } else if (currentUser.getRole() == UserRole.CUSTOMER) {
+                        makeReservation();
+                    } else {
+                        displayInvalidOptionMessage();
+                    }
                     break;
-                case AppConstants.MENU_MAKE_RESERVATION:
-                    makeReservation();
+                case 3: // Remove Room (Admin/Staff only)
+                    if (isAdminOrStaff()) {
+                        removeRoom();
+                    } else {
+                        displayInvalidOptionMessage();
+                    }
                     break;
-                case AppConstants.MENU_CANCEL_RESERVATION:
+                case 4: // Cancel Reservation
                     cancelReservation();
                     break;
-                case AppConstants.MENU_VIEW_RESERVATIONS:
-                    viewAllReservations();
+                case 5: // View Reservations
+                    viewReservations();
                     break;
-                case AppConstants.MENU_EXIT:
-                    displayExitMessage();
-                    return false;
+                case 6: // View All Users (Admin only)
+                    if (currentUser.getRole() == UserRole.ADMIN) {
+                        viewAllUsers();
+                    } else {
+                        displayInvalidOptionMessage();
+                    }
+                    break;
+                case 7: // Manage Users (Admin only)
+                    if (currentUser.getRole() == UserRole.ADMIN) {
+                        manageUsers();
+                    } else {
+                        displayInvalidOptionMessage();
+                    }
+                    break;
+                case 8: // My Profile
+                    viewMyProfile();
+                    break;
+                case 9: // Logout
+                    return logout();
                 default:
                     displayInvalidOptionMessage();
             }
@@ -181,6 +347,43 @@ public class HotelReservationSystem {
             Room room = new Room(roomId, roomType, price, isAvailable);
             roomService.addRoom(room);
             System.out.println(AppConstants.SUCCESS_ROOM_ADDED);
+            
+        } catch (RoomException e) {
+            displayErrorMessage(e);
+        }
+    }
+
+    /**
+     * Remove a room (Admin/Staff only)
+     * Refactoring Technique: Extract Method
+     */
+    private static void removeRoom() {
+        try {
+            System.out.println("\n--- Remove Room ---");
+            
+            // Show all rooms first
+            List<Room> allRooms = roomService.getAllRooms();
+            if (allRooms.isEmpty()) {
+                System.out.println("No rooms available to remove.");
+                return;
+            }
+            
+            System.out.println("Current Rooms:");
+            for (Room room : allRooms) {
+                System.out.println("  " + room);
+            }
+            
+            int roomId = readRoomId();
+            
+            System.out.print("Are you sure you want to remove room " + roomId + "? (yes/no): ");
+            String confirm = scanner.nextLine();
+            
+            if (confirm.equalsIgnoreCase("yes")) {
+                roomService.removeRoom(roomId);
+                System.out.println("✓ Room removed successfully!");
+            } else {
+                System.out.println("Room removal cancelled.");
+            }
             
         } catch (RoomException e) {
             displayErrorMessage(e);
@@ -233,13 +436,18 @@ public class HotelReservationSystem {
      * Make a new reservation
      * Refactoring Technique: Extract Method (heavily refactored from long method)
      * Refactoring Technique: Replace Temp with Query
+     * 
+     * Customer only: Books for themselves
      */
     private static void makeReservation() {
         try {
             System.out.println("\n--- Make Reservation ---");
             
+            // Customer books for themselves only
+            int userId = currentUser.getUserId();
+            System.out.println("Booking for: " + currentUser.getUsername() + " (ID: " + currentUser.getUserId() + ")");
+            
             int reservationId = readReservationId();
-            int userId = readUserId();
             int roomId = readRoomId();
             
             // Verify room is available
@@ -316,17 +524,6 @@ public class HotelReservationSystem {
     }
 
     /**
-     * Read user ID from user
-     * Refactoring Technique: Extract Method
-     */
-    private static int readUserId() {
-        System.out.print("Enter User ID: ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
-        return id;
-    }
-
-    /**
      * Read check-in date from user
      * Refactoring Technique: Extract Method
      */
@@ -382,7 +579,19 @@ public class HotelReservationSystem {
     }
 
     /**
-     * Display all reservations
+     * View reservations based on user role
+     * Refactoring Technique: Extract Method
+     */
+    private static void viewReservations() {
+        if (isAdminOrStaff()) {
+            viewAllReservations();
+        } else {
+            viewMyReservations();
+        }
+    }
+    
+    /**
+     * Display all reservations (Admin/Staff only)
      * Refactoring Technique: Extract Method
      */
     private static void viewAllReservations() {
@@ -395,11 +604,158 @@ public class HotelReservationSystem {
         }
         
         for (Reservation reservation : reservations) {
-            System.out.println(reservation);
+            try {
+                User user = userService.getUserById(reservation.getUserId());
+                System.out.println(reservation + " | User: " + user.getUsername());
+            } catch (UserException e) {
+                System.out.println(reservation + " | User: Unknown");
+            }
         }
         System.out.println("\nTotal Reservations: " + reservationService.getReservationCount());
         System.out.println("Total Revenue: $" + 
             String.format("%.2f", reservationService.calculateTotalRevenue()));
+    }
+    
+    /**
+     * Display my reservations (Customer view)
+     */
+    private static void viewMyReservations() {
+        System.out.println("\n--- My Reservations ---");
+        List<Reservation> reservations = reservationService.getReservationsByUserId(currentUser.getUserId());
+        
+        if (reservations.isEmpty()) {
+            System.out.println("You have no reservations.");
+            return;
+        }
+        
+        for (Reservation reservation : reservations) {
+            System.out.println(reservation);
+        }
+        System.out.println("\nTotal: " + reservations.size() + " reservation(s)");
+    }
+    
+    /**
+     * View all users (Admin only)
+     */
+    private static void viewAllUsers() {
+        System.out.println("\n--- All Users ---");
+        List<User> users = userService.getAllUsers();
+        
+        for (User user : users) {
+            System.out.println(user);
+        }
+        System.out.println("\nTotal Users: " + userService.getUserCount());
+    }
+    
+    /**
+     * Manage users (Admin only)
+     */
+    private static void manageUsers() {
+        System.out.println("\n--- Manage Users ---");
+        System.out.println("1. Change User Role");
+        System.out.println("2. Delete User");
+        System.out.println("3. Back");
+        System.out.print("Choose an option: ");
+        
+        int choice = readMenuOption();
+        
+        try {
+            switch (choice) {
+                case 1:
+                    changeUserRole();
+                    break;
+                case 2:
+                    deleteUser();
+                    break;
+                case 3:
+                    return;
+                default:
+                    System.out.println("Invalid option!");
+            }
+        } catch (UserException e) {
+            displayErrorMessage(e);
+        }
+    }
+    
+    /**
+     * Change user role (Admin only)
+     */
+    private static void changeUserRole() throws UserException {
+        System.out.print("Enter User ID: ");
+        int userId = scanner.nextInt();
+        scanner.nextLine();
+        
+        System.out.println("Select new role:");
+        System.out.println("1. Customer");
+        System.out.println("2. Staff");
+        System.out.println("3. Admin");
+        System.out.print("Choice: ");
+        int roleChoice = scanner.nextInt();
+        scanner.nextLine();
+        
+        UserRole newRole;
+        switch (roleChoice) {
+            case 1:
+                newRole = UserRole.CUSTOMER;
+                break;
+            case 2:
+                newRole = UserRole.STAFF;
+                break;
+            case 3:
+                newRole = UserRole.ADMIN;
+                break;
+            default:
+                throw new UserException("Invalid role selection");
+        }
+        
+        userService.updateUserRole(userId, newRole);
+        System.out.println("✓ User role updated successfully!");
+    }
+    
+    /**
+     * Delete user (Admin only)
+     */
+    private static void deleteUser() throws UserException {
+        System.out.print("Enter User ID to delete: ");
+        int userId = scanner.nextInt();
+        scanner.nextLine();
+        
+        if (userId == currentUser.getUserId()) {
+            throw new UserException("Cannot delete your own account!");
+        }
+        
+        System.out.print("Are you sure? (yes/no): ");
+        String confirm = scanner.nextLine();
+        
+        if (confirm.equalsIgnoreCase("yes")) {
+            userService.deleteUser(userId);
+            System.out.println("✓ User deleted successfully!");
+        }
+    }
+    
+    /**
+     * View my profile
+     */
+    private static void viewMyProfile() {
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║            My Profile                  ║");
+        System.out.println("╚════════════════════════════════════════╝");
+        System.out.println("User ID: " + currentUser.getUserId());
+        System.out.println("Username: " + currentUser.getUsername());
+        System.out.println("Role: " + currentUser.getRole());
+        
+        List<Reservation> myReservations = reservationService.getReservationsByUserId(currentUser.getUserId());
+        System.out.println("Total Reservations: " + myReservations.size());
+    }
+    
+    /**
+     * Logout - returns user to login menu
+     */
+    private static boolean logout() {
+        System.out.println("\n✓ Logged out successfully!");
+        System.out.println("Goodbye, " + currentUser.getUsername() + "!");
+        currentUser = null;
+        return false; // Exit main menu loop
     }
 
     /**
@@ -407,10 +763,10 @@ public class HotelReservationSystem {
      * Refactoring Technique: Extract Method
      */
     private static void displayExitMessage() {
-        System.out.println("\n========================================");
-        System.out.println("  Thank you for using our system!");
-        System.out.println("  Goodbye!");
-        System.out.println("========================================");
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║  Thank you for using our system!       ║");
+        System.out.println("║  Goodbye!                              ║");
+        System.out.println("╚════════════════════════════════════════╝");
     }
 
     /**

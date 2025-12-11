@@ -1,0 +1,111 @@
+@startuml Hotel_Reservation_System_Activity_Main_Flow
+
+title Hotel Reservation System - Main Application Activity Diagram
+
+start
+
+:User logged in;
+
+partition "Main Application Loop" {
+  while (User wants to continue?) is (yes)
+    
+    if (User role?) then (Customer)
+      :Display Customer Menu;
+      note right
+        1. View All Rooms
+        2. Make Reservation
+        4. Cancel Reservation
+        5. View Reservations
+        8. My Profile
+        9. Logout
+      end note
+      
+    elseif (Staff)
+      :Display Staff Menu;
+      note right
+        1. View All Rooms
+        2. Add Room
+        3. Remove Room
+        4. Cancel Reservation
+        5. View Reservations
+        8. My Profile
+        9. Logout
+      end note
+      
+    else (Admin)
+      :Display Admin Menu;
+      note right
+        1. View All Rooms
+        2. Add Room
+        3. Remove Room
+        4. Cancel Reservation
+        5. View All Reservations
+        6. View All Users
+        7. Manage Users
+        8. My Profile
+        9. Logout
+      end note
+    endif
+    
+    :User selects option;
+    
+    if (Option 1) then
+      :Fetch all rooms;
+      :Display room list;
+      
+    elseif (Option 2) then
+      if (Role is Admin/Staff?) then (yes)
+        :Add Room Activity;
+      else (Customer)
+        :Make Reservation Activity;
+      endif
+      
+    elseif (Option 3) then
+      if (Role is Admin/Staff?) then (yes)
+        :Remove Room Activity;
+      else (no)
+        :Display "Invalid option";
+      endif
+      
+    elseif (Option 4) then
+      :Cancel Reservation Activity;
+      
+    elseif (Option 5) then
+      if (Role is Admin/Staff?) then (yes)
+        :View All Reservations;
+      else (Customer)
+        :View Own Reservations;
+      endif
+      
+    elseif (Option 6) then
+      if (Role is Admin?) then (yes)
+        :View All Users;
+      else (no)
+        :Display "Access denied";
+      endif
+      
+    elseif (Option 7) then
+      if (Role is Admin?) then (yes)
+        :Manage Users Activity;
+      else (no)
+        :Display "Access denied";
+      endif
+      
+    elseif (Option 8) then
+      :Display user profile;
+      
+    else (Option 9)
+      :Set currentUser = null;
+      :Display logout message;
+      :Return to login menu;
+      stop
+    endif
+    
+  endwhile (no)
+}
+
+:Exit application;
+
+stop
+
+@enduml

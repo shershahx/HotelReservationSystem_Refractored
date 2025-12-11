@@ -4,6 +4,9 @@
 
 This is a **Software Re-Engineering** project that demonstrates systematic code refactoring of a legacy Hotel Reservation System. The project identifies code smells and applies industry-standard refactoring techniques to transform the codebase into a clean, maintainable, and professional system.
 
+### 🆕 NEW: User Authentication System
+The system now includes a complete **authentication and authorization system** with role-based access control (RBAC), making the User class fully functional and interactive!
+
 ---
 
 ## 📁 Project Structure
@@ -15,6 +18,8 @@ HotelReservationSystem/
 ├── REFACTORING_DOCUMENTATION.md       ← Complete documentation (15,000+ words)
 ├── QUICK_REFERENCE.md                 ← Demo day quick reference
 ├── CLASS_DIAGRAMS.md                  ← Visual diagrams
+├── AUTHENTICATION_GUIDE.md            ← NEW: Authentication system guide
+├── TEST_AUTHENTICATION.md             ← NEW: Authentication test scenarios
 │
 ├── legacy/                            ← Original code (backup)
 │   ├── HotelReservationSystem.java
@@ -25,22 +30,24 @@ HotelReservationSystem/
 │   └── ReservationService.java
 │
 ├── src/hotelreservationsystem/        ← Refactored code
-│   ├── HotelReservationSystem.java   ← Main class (refactored)
+│   ├── HotelReservationSystem.java   ← Main class (refactored + auth)
 │   ├── Room.java                     ← Domain model (refactored)
 │   ├── Reservation.java              ← Domain model (refactored)
-│   ├── User.java                     ← Domain model (refactored)
+│   ├── User.java                     ← Domain model (refactored + active)
 │   ├── RoomService.java              ← Service (refactored)
 │   ├── ReservationService.java       ← Service (refactored)
+│   ├── UserService.java              ← NEW: User management service
 │   │
 │   ├── constants/
 │   │   └── AppConstants.java         ← NEW: Application constants
 │   │
 │   ├── enums/
-│   │   └── UserRole.java             ← NEW: Type-safe roles
+│   │   └── UserRole.java             ← NEW: Type-safe roles (CUSTOMER/STAFF/ADMIN)
 │   │
 │   ├── exceptions/
 │   │   ├── RoomException.java        ← NEW: Custom exception
-│   │   └── ReservationException.java ← NEW: Custom exception
+│   │   ├── ReservationException.java ← NEW: Custom exception
+│   │   └── UserException.java        ← NEW: Authentication exception
 │   │
 │   └── utils/
 │       ├── DateUtils.java            ← NEW: Date utilities
@@ -48,6 +55,7 @@ HotelReservationSystem/
 │
 ├── build/
 │   └── classes/                       ← Compiled .class files
+```
 │
 └── nbproject/                         ← NetBeans project files
 ```
@@ -111,28 +119,41 @@ HotelReservationSystem/
 # Navigate to project root
 cd c:\Users\shers\Desktop\Desktop\ddraw\HotelReservationSystem
 
-# Compile utilities first
-javac -d build/classes src/hotelreservationsystem/constants/*.java
-javac -d build/classes src/hotelreservationsystem/enums/*.java
-javac -d build/classes src/hotelreservationsystem/exceptions/*.java
-javac -d build/classes src/hotelreservationsystem/utils/*.java
-
-# Compile domain models
-javac -cp build/classes -d build/classes src/hotelreservationsystem/Room.java
-javac -cp build/classes -d build/classes src/hotelreservationsystem/Reservation.java
-javac -cp build/classes -d build/classes src/hotelreservationsystem/User.java
-
-# Compile services
-javac -cp build/classes -d build/classes src/hotelreservationsystem/*Service.java
-
-# Compile main class
-javac -cp build/classes -d build/classes src/hotelreservationsystem/HotelReservationSystem.java
+# Compile all files (recommended method)
+javac -d build/classes -sourcepath src src/hotelreservationsystem/exceptions/*.java src/hotelreservationsystem/enums/*.java src/hotelreservationsystem/constants/*.java src/hotelreservationsystem/utils/*.java src/hotelreservationsystem/*.java
 ```
 
 ### Run the Application
 ```powershell
 java -cp build/classes hotelreservationsystem.HotelReservationSystem
 ```
+
+### 🔐 Default Login Credentials
+```
+Username: admin      | Password: admin123    | Role: ADMIN
+Username: staff      | Password: staff123    | Role: STAFF  
+Username: customer   | Password: customer123 | Role: CUSTOMER
+```
+
+Or register a new account from the login screen!
+
+---
+
+## ✨ New Features
+
+### 🔐 User Authentication System
+- **Login/Logout** - Secure authentication with username/password
+- **User Registration** - New users can create customer accounts
+- **Role-Based Access Control (RBAC)** - Three permission levels
+  - **ADMIN**: Full system access, user management
+  - **STAFF**: Room management, view all reservations
+  - **CUSTOMER**: Make/view own reservations
+- **Session Management** - Track logged-in user throughout session
+- **User Profile** - View personal information and statistics
+- **Admin Panel** - Manage users, change roles, view all users
+
+**See `AUTHENTICATION_GUIDE.md` for complete documentation**  
+**See `TEST_AUTHENTICATION.md` for test scenarios**
 
 ---
 
@@ -180,13 +201,22 @@ java -cp build/classes hotelreservationsystem.HotelReservationSystem
 14. Hide Method
 15. Introduce Assertion
 
-### New Classes Created: **6**
+### New Classes Created: **8**
 - `AppConstants` - Application constants
-- `UserRole` (Enum) - Type-safe roles
+- `UserRole` (Enum) - Type-safe roles (CUSTOMER/STAFF/ADMIN)
 - `RoomException` - Custom exception
 - `ReservationException` - Custom exception
+- `UserException` - NEW: Authentication exception
 - `DateUtils` - Date utilities
 - `InputValidator` - Validation utilities
+- `UserService` - NEW: User management and authentication
+
+### System Enhancements
+- 🔐 **User Authentication** - Login/logout with password verification
+- 👥 **User Management** - Register, view, update, delete users
+- 🛡️ **Authorization** - Role-based access control (RBAC)
+- 📊 **User Tracking** - Reservations linked to user accounts
+- 🎯 **Session Management** - Stateful user sessions
 
 ---
 
@@ -197,6 +227,8 @@ java -cp build/classes hotelreservationsystem.HotelReservationSystem
 - ✅ Refactored code: `/src/hotelreservationsystem/`
 - ✅ Full docs: `REFACTORING_DOCUMENTATION.md`
 - ✅ Quick ref: `QUICK_REFERENCE.md`
+- ✅ Auth guide: `AUTHENTICATION_GUIDE.md` **NEW**
+- ✅ Test scenarios: `TEST_AUTHENTICATION.md` **NEW**
 - ✅ Diagrams: `CLASS_DIAGRAMS.md`
 - ✅ Summary: `PROJECT_SUMMARY.md`
 

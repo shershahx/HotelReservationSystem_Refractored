@@ -1,0 +1,59 @@
+@startuml Hotel_Reservation_System_Activity_Room_Management
+
+title Hotel Reservation System - Room Management Activity (Admin/Staff)
+
+start
+
+:Admin/Staff selects room operation;
+
+if (Operation?) then (Add Room)
+  
+  partition "Add Room" {
+    :Prompt for Room ID;
+    :Prompt for Room Type;
+    :Prompt for Price;
+    :Prompt for Availability;
+    
+    :Validate inputs;
+    
+    if (Room ID exists?) then (yes)
+      :Display "Room already exists" error;
+    else (no)
+      if (Valid inputs?) then (yes)
+        :Create room object;
+        :Add to room list;
+        :Display success message;
+      else (no)
+        :Display validation error;
+      endif
+    endif
+  }
+  
+else (Remove Room)
+  
+  partition "Remove Room" {
+    :Display all rooms;
+    
+    if (Rooms exist?) then (yes)
+      :Prompt for Room ID;
+      :Read room ID;
+      
+      :Prompt for confirmation;
+      
+      if (Confirmed?) then (yes)
+        :Remove room from list;
+        :Display success message;
+      else (no)
+        :Display "Cancelled" message;
+      endif
+      
+    else (no)
+      :Display "No rooms to remove";
+    endif
+  }
+  
+endif
+
+stop
+
+@enduml

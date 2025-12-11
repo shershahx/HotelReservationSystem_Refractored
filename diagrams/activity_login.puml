@@ -1,0 +1,55 @@
+@startuml Hotel_Reservation_System_Activity_Login
+
+title Hotel Reservation System - Login Activity Diagram
+
+start
+
+:User opens application;
+
+while (User not logged in?) is (yes)
+  :Display Authentication Menu;
+  :User selects option;
+  
+  if (Option selected?) then (Login)
+    :Prompt for username;
+    :Prompt for password;
+    :Authenticate credentials;
+    
+    if (Credentials valid?) then (yes)
+      :Set currentUser;
+      :Display welcome message;
+      :Show user role;
+      stop
+    else (no)
+      :Display error message;
+    endif
+    
+  elseif (Register) then
+    :Prompt for username;
+    
+    if (Username exists?) then (yes)
+      :Display "Username taken";
+    else (no)
+      :Prompt for password;
+      :Prompt to confirm password;
+      
+      if (Passwords match?) then (yes)
+        :Create new user (CUSTOMER role);
+        :Display success message;
+        :Show new user ID;
+      else (no)
+        :Display "Passwords don't match";
+      endif
+    endif
+    
+  else (Exit)
+    :Display goodbye message;
+    stop
+  endif
+endwhile (no)
+
+:Load main menu;
+
+stop
+
+@enduml

@@ -112,12 +112,11 @@ public class Room {
 
     @Override
     public String toString() {
-        return "Room{" +
+        return "Room " +
                 "roomId=" + roomId +
                 ", roomType='" + roomType + '\'' +
                 ", price=" + price +
-                ", isAvailable=" + isAvailable +
-                '}';
+                ", isAvailable=" + isAvailable;
     }
 }
 

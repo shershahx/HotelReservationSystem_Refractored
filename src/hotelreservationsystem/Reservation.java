@@ -163,15 +163,14 @@ public class Reservation {
 
     @Override
     public String toString() {
-        return "Reservation{" +
+        return "Reservation " +
                 "reservationId=" + reservationId +
                 ", userId=" + userId +
                 ", roomId=" + roomId +
                 ", checkInDate=" + checkInDate +
                 ", checkOutDate=" + checkOutDate +
                 ", totalCost=" + totalCost +
-                ", nights=" + getNumberOfNights() +
-                '}';
+                ", nights=" + getNumberOfNights();
     }
 }
 

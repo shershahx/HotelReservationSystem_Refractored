@@ -108,11 +108,10 @@ public class User {
      */
     @Override
     public String toString() {
-        return "User{" +
+        return "User " +
                 "userId=" + userId +
                 ", username='" + username + '\'' +
-                ", role=" + role +
-                '}';
+                ", role=" + role;
     }
 }
 

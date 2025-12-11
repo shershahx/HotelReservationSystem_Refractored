@@ -1,0 +1,49 @@
+@startuml Hotel_Reservation_System_Activity_Make_Reservation
+
+title Hotel Reservation System - Make Reservation Activity (Customer)
+
+start
+
+:Customer selects "Make Reservation";
+
+:Display reservation form;
+:Set userId = currentUser.getUserId();
+
+:Prompt for Reservation ID;
+:Read reservation ID;
+
+:Prompt for Room ID;
+:Read room ID;
+
+:Check room availability;
+
+if (Room available?) then (yes)
+  :Prompt for check-in date;
+  :Read check-in date;
+  
+  :Prompt for check-out date;
+  :Read check-out date;
+  
+  if (Check-out > Check-in?) then (yes)
+    :Calculate number of nights;
+    :Fetch room price;
+    :Calculate total cost = price × nights;
+    
+    :Create reservation object;
+    :Save reservation;
+    :Mark room as occupied;
+    
+    :Display success message;
+    :Show reservation details;
+    
+  else (no)
+    :Display "Invalid date range" error;
+  endif
+  
+else (no)
+  :Display "Room not available" error;
+endif
+
+stop
+
+@enduml

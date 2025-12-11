@@ -1,0 +1,95 @@
+@startuml Hotel_Reservation_System_Use_Case
+
+title Hotel Reservation System - Use Case Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor Customer
+actor Staff
+actor Admin
+
+rectangle "Hotel Reservation System" {
+  ' Authentication
+  usecase (Login) as UC1
+  usecase (Register) as UC2
+  usecase (Logout) as UC3
+  usecase (View Profile) as UC4
+  
+  ' Room Management
+  usecase (View All Rooms) as UC5
+  usecase (Add Room) as UC6
+  usecase (Remove Room) as UC7
+  
+  ' Reservation Management
+  usecase (Make Reservation) as UC8
+  usecase (Cancel Reservation) as UC9
+  usecase (View Reservations) as UC10
+  
+  ' User Management
+  usecase (View All Users) as UC11
+  usecase (Manage Users) as UC12
+  usecase (Change User Role) as UC13
+  usecase (Delete User) as UC14
+}
+
+' Customer relationships
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+Customer --> UC8
+Customer --> UC9
+Customer --> UC10
+
+' Staff relationships
+Staff --> UC1
+Staff --> UC3
+Staff --> UC4
+Staff --> UC5
+Staff --> UC6
+Staff --> UC7
+Staff --> UC9
+Staff --> UC10
+
+' Admin relationships
+Admin --> UC1
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC9
+Admin --> UC10
+Admin --> UC11
+Admin --> UC12
+
+' Include relationships
+UC12 .> UC13 : <<include>>
+UC12 .> UC14 : <<include>>
+
+' Extend relationships
+UC10 ..> UC9 : <<extend>>
+
+' Notes
+note right of Customer
+  - Can register new account
+  - Books rooms for themselves
+  - Views only own reservations
+end note
+
+note right of Staff
+  - Manages rooms
+  - Views all reservations
+  - Cannot manage users
+end note
+
+note right of Admin
+  - Full system access
+  - Manages users and roles
+  - Cannot make reservations
+  (must login as customer)
+end note
+
+@enduml
